@@ -1,0 +1,229 @@
+import type { Seller, MarketItem } from "./types";
+
+export const SELLERS: Seller[] = [
+  {
+    name: "Елена Волкова",
+    city: "Москва",
+    phone: "+7 (916) 123-45-67",
+    telegram: "@elena_dance",
+    avatar_url:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
+    registered: "Март 2024",
+    listings_count: 5,
+  },
+  {
+    name: "Дмитрий Кузнецов",
+    city: "Санкт-Петербург",
+    phone: "+7 (921) 987-65-43",
+    telegram: "@dima_ballroom",
+    avatar_url:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+    registered: "Январь 2025",
+    listings_count: 3,
+  },
+  {
+    name: "Анна Соколова",
+    city: "Новосибирск",
+    phone: "+7 (913) 555-12-34",
+    telegram: "@anna_dance_nsk",
+    avatar_url:
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
+    registered: "Октябрь 2024",
+    listings_count: 8,
+  },
+  {
+    name: "Михаил Петров",
+    city: "Казань",
+    phone: "+7 (843) 222-33-44",
+    telegram: "@misha_dance",
+    avatar_url:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+    registered: "Июнь 2025",
+    listings_count: 2,
+  },
+];
+
+export const MOCK_ITEMS: MarketItem[] = [
+  {
+    id: "1",
+    title: "Платье для латины Chrisanne Clover",
+    price: 45_000,
+    image_url:
+      "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=800&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&h=1000&fit=crop",
+      "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=800&h=1000&fit=crop",
+      "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=800&h=1000&fit=crop",
+    ],
+    category: "competition",
+    condition: "used",
+    program: "latin",
+    gender: "woman",
+    size: "S",
+    height: "164-170 см",
+    federation: "FTSARR",
+    description:
+      "Продаю турнирное платье для латиноамериканской программы от Chrisanne Clover. Было надето на 3 турнира, состояние отличное. Ткань — лайкра с декоративной бахромой, украшено стразами Preciosa. Цвет — чёрный с золотым. Подходит под правила ФТСАРР для категории Взрослые-Б. Возможна примерка в Москве.",
+    posted_at: "2026-03-05T14:30:00Z",
+    views: 142,
+    seller: SELLERS[0],
+  },
+  {
+    id: "2",
+    title: "Фрак мужской International Dance Shoes",
+    price: 62_000,
+    image_url:
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&h=800&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&h=1000&fit=crop",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=1000&fit=crop",
+    ],
+    category: "competition",
+    condition: "new",
+    program: "standart",
+    gender: "man",
+    size: "48",
+    height: "178-182 см",
+    federation: "WDSF",
+    description:
+      "Новый мужской фрак для стандартной программы от IDS. Ни разу не надевался — не подошёл размер. Классический чёрно-белый, пошив Великобритания. Полностью соответствует правилам WDSF. В комплекте: фрак, жилет, бабочка. Готов отправить транспортной компанией или встретиться в СПб.",
+    posted_at: "2026-03-07T09:15:00Z",
+    views: 89,
+    seller: SELLERS[1],
+  },
+  {
+    id: "3",
+    title: "Тренировочная юбка для стандарта",
+    price: 4_500,
+    image_url:
+      "https://images.unsplash.com/photo-1547153760-18fc86324498?w=600&h=800&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1547153760-18fc86324498?w=800&h=1000&fit=crop",
+    ],
+    category: "practice",
+    condition: "new",
+    program: "standart",
+    gender: "woman",
+    size: "M",
+    height: "160-168 см",
+    federation: null,
+    description:
+      "Новая тренировочная юбка-годе для стандартной программы. Ткань бифлекс, красиво летит в движении. Цвет — тёмно-синий. Длина до щиколотки. Подходит для тренировок и открытых уроков. Пояс на резинке. Отправлю почтой или СДЭК.",
+    posted_at: "2026-03-01T18:00:00Z",
+    views: 67,
+    seller: SELLERS[2],
+  },
+  {
+    id: "4",
+    title: "Рубашка-боди для латины (мальчик)",
+    price: 3_200,
+    image_url:
+      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=800&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800&h=1000&fit=crop",
+    ],
+    category: "practice",
+    condition: "used",
+    program: "latin",
+    gender: "boy",
+    size: "134",
+    height: "128-134 см",
+    federation: null,
+    description:
+      "Тренировочная рубашка-боди для мальчика, латиноамериканская программа. Носили один сезон, состояние хорошее, без дефектов. Цвет белый, ткань стрейч. Удобные кнопки снизу. Ребёнок вырос, поэтому продаём. Находимся в Казани, возможна отправка.",
+    posted_at: "2026-02-20T12:00:00Z",
+    views: 34,
+    seller: SELLERS[3],
+  },
+  {
+    id: "5",
+    title: "Платье стандарт юниоры Aida",
+    price: 38_000,
+    image_url:
+      "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=600&h=800&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=800&h=1000&fit=crop",
+      "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&h=1000&fit=crop",
+    ],
+    category: "competition",
+    condition: "used",
+    program: "standart",
+    gender: "girl",
+    size: "152",
+    height: "146-152 см",
+    federation: "RTS",
+    description:
+      "Красивое конкурсное платье для стандарта. Производство — ателье Aida (Москва). Нежно-голубой цвет, украшение стразами Swarovski по лифу и рукавам. Платье в идеальном состоянии, надевалось 5 раз. Допуск РТС, категория Юниоры-1. Рекомендую! Примерка в Москве по договорённости.",
+    posted_at: "2026-03-08T10:00:00Z",
+    views: 215,
+    seller: SELLERS[0],
+  },
+  {
+    id: "6",
+    title: "Тренировочные брюки мужские Espen",
+    price: 7_800,
+    image_url:
+      "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=600&h=800&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=800&h=1000&fit=crop",
+    ],
+    category: "practice",
+    condition: "new",
+    program: "standart",
+    gender: "man",
+    size: "50",
+    height: "176-180 см",
+    federation: null,
+    description:
+      "Новые тренировочные брюки для стандарта от Espen Salberg. Куплены в Лондоне, не подошёл размер (маломерят). Чёрные, прямого кроя, очень комфортная ткань с лёгким стрейчем. Идеальны для ежедневных тренировок. Отправлю в любой город.",
+    posted_at: "2026-03-06T16:45:00Z",
+    views: 53,
+    seller: SELLERS[1],
+  },
+  {
+    id: "7",
+    title: "Костюм латина женский со стразами Swarovski",
+    price: 85_000,
+    image_url:
+      "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=600&h=800&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=800&h=1000&fit=crop",
+      "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&h=1000&fit=crop",
+      "https://images.unsplash.com/photo-1547153760-18fc86324498?w=800&h=1000&fit=crop",
+    ],
+    category: "competition",
+    condition: "new",
+    program: "latin",
+    gender: "woman",
+    size: "S",
+    height: "168-174 см",
+    federation: "FTSARR",
+    description:
+      "Абсолютно новый конкурсный костюм для латины. Пошив на заказ в ателье Chrisanne (Лондон). Полностью расшит стразами Swarovski — около 3000 камней. Цвет — красно-чёрный градиент. Бахрома ручной работы. Создан для категории Взрослые по правилам ФТСАРР. Продаю, так как заказали два платья и выбрали другое. Торг уместен.",
+    posted_at: "2026-03-09T08:00:00Z",
+    views: 312,
+    seller: SELLERS[2],
+  },
+  {
+    id: "8",
+    title: "Топ тренировочный для латины (девочка)",
+    price: 2_900,
+    image_url:
+      "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=600&h=800&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=800&h=1000&fit=crop",
+    ],
+    category: "practice",
+    condition: "new",
+    program: "latin",
+    gender: "girl",
+    size: "140",
+    height: "134-140 см",
+    federation: null,
+    description:
+      "Новый тренировочный топ для латины, подойдёт девочке 8-10 лет. Чёрный, с длинным рукавом, ткань — бифлекс. Хорошо тянется, не сковывает движения. Можно носить с юбкой или леггинсами. Покупали для дочки, но быстро выросла. Отправим из Казани.",
+    posted_at: "2026-02-28T11:30:00Z",
+    views: 41,
+    seller: SELLERS[3],
+  },
+];

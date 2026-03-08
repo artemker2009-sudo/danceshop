@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   SlidersHorizontal,
   Search,
@@ -22,320 +23,22 @@ import {
   ShieldCheck,
   Ruler,
   Tag,
+  Plus,
 } from "lucide-react";
+import { useStore } from "../lib/store";
+import {
+  LABEL,
+  formatPrice,
+  timeAgo,
+  pluralize,
+  type MarketItem,
+  type Category,
+  type Condition,
+  type Program,
+  type Federation,
+} from "../lib/types";
 
-/* ──────────────────────────── Types ──────────────────────────── */
-
-type Category = "competition" | "practice";
-type Condition = "new" | "used";
-type Program = "standart" | "latin";
-type Gender = "boy" | "girl" | "man" | "woman";
-type Federation = "FTSARR" | "RTS" | "WDSF" | "any";
-
-interface Seller {
-  name: string;
-  city: string;
-  phone: string;
-  telegram: string;
-  avatar_url: string;
-  registered: string;
-  listings_count: number;
-}
-
-interface MarketItem {
-  id: string;
-  title: string;
-  price: number;
-  image_url: string;
-  images: string[];
-  category: Category;
-  condition: Condition;
-  program: Program;
-  gender: Gender;
-  size: string;
-  height: string;
-  federation: Federation | null;
-  description: string;
-  posted_at: string;
-  views: number;
-  seller: Seller;
-}
-
-/* ──────────────────────────── Mock Data ──────────────────────── */
-
-const SELLERS: Seller[] = [
-  {
-    name: "Елена Волкова",
-    city: "Москва",
-    phone: "+7 (916) 123-45-67",
-    telegram: "@elena_dance",
-    avatar_url:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
-    registered: "Март 2024",
-    listings_count: 5,
-  },
-  {
-    name: "Дмитрий Кузнецов",
-    city: "Санкт-Петербург",
-    phone: "+7 (921) 987-65-43",
-    telegram: "@dima_ballroom",
-    avatar_url:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    registered: "Январь 2025",
-    listings_count: 3,
-  },
-  {
-    name: "Анна Соколова",
-    city: "Новосибирск",
-    phone: "+7 (913) 555-12-34",
-    telegram: "@anna_dance_nsk",
-    avatar_url:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
-    registered: "Октябрь 2024",
-    listings_count: 8,
-  },
-  {
-    name: "Михаил Петров",
-    city: "Казань",
-    phone: "+7 (843) 222-33-44",
-    telegram: "@misha_dance",
-    avatar_url:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-    registered: "Июнь 2025",
-    listings_count: 2,
-  },
-];
-
-const mockItems: MarketItem[] = [
-  {
-    id: "1",
-    title: "Платье для латины Chrisanne Clover",
-    price: 45_000,
-    image_url:
-      "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=800&fit=crop",
-    images: [
-      "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&h=1000&fit=crop",
-      "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=800&h=1000&fit=crop",
-      "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=800&h=1000&fit=crop",
-    ],
-    category: "competition",
-    condition: "used",
-    program: "latin",
-    gender: "woman",
-    size: "S",
-    height: "164-170 см",
-    federation: "FTSARR",
-    description:
-      "Продаю турнирное платье для латиноамериканской программы от Chrisanne Clover. Было надето на 3 турнира, состояние отличное. Ткань — лайкра с декоративной бахромой, украшено стразами Preciosa. Цвет — чёрный с золотым. Подходит под правила ФТСАРР для категории Взрослые-Б. Возможна примерка в Москве.",
-    posted_at: "2026-03-05T14:30:00Z",
-    views: 142,
-    seller: SELLERS[0],
-  },
-  {
-    id: "2",
-    title: "Фрак мужской International Dance Shoes",
-    price: 62_000,
-    image_url:
-      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&h=800&fit=crop",
-    images: [
-      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&h=1000&fit=crop",
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=1000&fit=crop",
-    ],
-    category: "competition",
-    condition: "new",
-    program: "standart",
-    gender: "man",
-    size: "48",
-    height: "178-182 см",
-    federation: "WDSF",
-    description:
-      "Новый мужской фрак для стандартной программы от IDS. Ни разу не надевался — не подошёл размер. Классический чёрно-белый, пошив Великобритания. Полностью соответствует правилам WDSF. В комплекте: фрак, жилет, бабочка. Готов отправить транспортной компанией или встретиться в СПб.",
-    posted_at: "2026-03-07T09:15:00Z",
-    views: 89,
-    seller: SELLERS[1],
-  },
-  {
-    id: "3",
-    title: "Тренировочная юбка для стандарта",
-    price: 4_500,
-    image_url:
-      "https://images.unsplash.com/photo-1547153760-18fc86324498?w=600&h=800&fit=crop",
-    images: [
-      "https://images.unsplash.com/photo-1547153760-18fc86324498?w=800&h=1000&fit=crop",
-    ],
-    category: "practice",
-    condition: "new",
-    program: "standart",
-    gender: "woman",
-    size: "M",
-    height: "160-168 см",
-    federation: null,
-    description:
-      "Новая тренировочная юбка-годе для стандартной программы. Ткань бифлекс, красиво летит в движении. Цвет — тёмно-синий. Длина до щиколотки. Подходит для тренировок и открытых уроков. Пояс на резинке. Отправлю почтой или СДЭК.",
-    posted_at: "2026-03-01T18:00:00Z",
-    views: 67,
-    seller: SELLERS[2],
-  },
-  {
-    id: "4",
-    title: "Рубашка-боди для латины (мальчик)",
-    price: 3_200,
-    image_url:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=800&fit=crop",
-    images: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800&h=1000&fit=crop",
-    ],
-    category: "practice",
-    condition: "used",
-    program: "latin",
-    gender: "boy",
-    size: "134",
-    height: "128-134 см",
-    federation: null,
-    description:
-      "Тренировочная рубашка-боди для мальчика, латиноамериканская программа. Носили один сезон, состояние хорошее, без дефектов. Цвет белый, ткань стрейч. Удобные кнопки снизу. Ребёнок вырос, поэтому продаём. Находимся в Казани, возможна отправка.",
-    posted_at: "2026-02-20T12:00:00Z",
-    views: 34,
-    seller: SELLERS[3],
-  },
-  {
-    id: "5",
-    title: "Платье стандарт юниоры Aida",
-    price: 38_000,
-    image_url:
-      "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=600&h=800&fit=crop",
-    images: [
-      "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=800&h=1000&fit=crop",
-      "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&h=1000&fit=crop",
-    ],
-    category: "competition",
-    condition: "used",
-    program: "standart",
-    gender: "girl",
-    size: "152",
-    height: "146-152 см",
-    federation: "RTS",
-    description:
-      "Красивое конкурсное платье для стандарта. Производство — ателье Aida (Москва). Нежно-голубой цвет, украшение стразами Swarovski по лифу и рукавам. Платье в идеальном состоянии, надевалось 5 раз. Допуск РТС, категория Юниоры-1. Рекомендую! Примерка в Москве по договорённости.",
-    posted_at: "2026-03-08T10:00:00Z",
-    views: 215,
-    seller: SELLERS[0],
-  },
-  {
-    id: "6",
-    title: "Тренировочные брюки мужские Espen",
-    price: 7_800,
-    image_url:
-      "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=600&h=800&fit=crop",
-    images: [
-      "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=800&h=1000&fit=crop",
-    ],
-    category: "practice",
-    condition: "new",
-    program: "standart",
-    gender: "man",
-    size: "50",
-    height: "176-180 см",
-    federation: null,
-    description:
-      "Новые тренировочные брюки для стандарта от Espen Salberg. Куплены в Лондоне, не подошёл размер (маломерят). Чёрные, прямого кроя, очень комфортная ткань с лёгким стрейчем. Идеальны для ежедневных тренировок. Отправлю в любой город.",
-    posted_at: "2026-03-06T16:45:00Z",
-    views: 53,
-    seller: SELLERS[1],
-  },
-  {
-    id: "7",
-    title: "Костюм латина женский со стразами Swarovski",
-    price: 85_000,
-    image_url:
-      "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=600&h=800&fit=crop",
-    images: [
-      "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=800&h=1000&fit=crop",
-      "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&h=1000&fit=crop",
-      "https://images.unsplash.com/photo-1547153760-18fc86324498?w=800&h=1000&fit=crop",
-    ],
-    category: "competition",
-    condition: "new",
-    program: "latin",
-    gender: "woman",
-    size: "S",
-    height: "168-174 см",
-    federation: "FTSARR",
-    description:
-      "Абсолютно новый конкурсный костюм для латины. Пошив на заказ в ателье Chrisanne (Лондон). Полностью расшит стразами Swarovski — около 3000 камней. Цвет — красно-чёрный градиент. Бахрома ручной работы. Создан для категории Взрослые по правилам ФТСАРР. Продаю, так как заказали два платья и выбрали другое. Торг уместен.",
-    posted_at: "2026-03-09T08:00:00Z",
-    views: 312,
-    seller: SELLERS[2],
-  },
-  {
-    id: "8",
-    title: "Топ тренировочный для латины (девочка)",
-    price: 2_900,
-    image_url:
-      "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=600&h=800&fit=crop",
-    images: [
-      "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=800&h=1000&fit=crop",
-    ],
-    category: "practice",
-    condition: "new",
-    program: "latin",
-    gender: "girl",
-    size: "140",
-    height: "134-140 см",
-    federation: null,
-    description:
-      "Новый тренировочный топ для латины, подойдёт девочке 8-10 лет. Чёрный, с длинным рукавом, ткань — бифлекс. Хорошо тянется, не сковывает движения. Можно носить с юбкой или леггинсами. Покупали для дочки, но быстро выросла. Отправим из Казани.",
-    posted_at: "2026-02-28T11:30:00Z",
-    views: 41,
-    seller: SELLERS[3],
-  },
-];
-
-/* ──────────────────────────── Helpers ─────────────────────────── */
-
-const LABEL: Record<string, string> = {
-  competition: "Турнирные",
-  practice: "Тренировочная",
-  new: "Новое",
-  used: "Б/У",
-  standart: "Стандарт",
-  latin: "Латина",
-  FTSARR: "ФТСАРР",
-  RTS: "РТС",
-  WDSF: "WDSF",
-  any: "Любая",
-  boy: "Мальчик",
-  girl: "Девочка",
-  man: "Мужчина",
-  woman: "Женщина",
-};
-
-function formatPrice(n: number) {
-  return n.toLocaleString("ru-RU") + " ₽";
-}
-
-function timeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMin / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMin < 1) return "Только что";
-  if (diffMin < 60) return `${diffMin} мин. назад`;
-  if (diffHours < 24) return `${diffHours} ч. назад`;
-  if (diffDays === 1) return "Вчера";
-  if (diffDays < 7) return `${diffDays} дн. назад`;
-
-  return date.toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-/* ─────────────────────── Filter sidebar ──────────────────────── */
+/* ─────────────────────── Filter state ────────────────────────── */
 
 interface FiltersState {
   category: Category;
@@ -360,6 +63,7 @@ const INITIAL_FILTERS: FiltersState = {
 /* ──────────────────────────── Page ────────────────────────────── */
 
 export default function MarketPage() {
+  const { allItems } = useStore();
   const [filters, setFilters] = useState<FiltersState>(INITIAL_FILTERS);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MarketItem | null>(null);
@@ -393,7 +97,7 @@ export default function MarketPage() {
   }
 
   const filteredItems = useMemo(() => {
-    return mockItems.filter((item) => {
+    return allItems.filter((item) => {
       if (item.category !== filters.category) return false;
       if (
         filters.conditions.length > 0 &&
@@ -422,7 +126,7 @@ export default function MarketPage() {
         return false;
       return true;
     });
-  }, [filters]);
+  }, [filters, allItems]);
 
   const resetFilters = () =>
     setFilters({ ...INITIAL_FILTERS, category: filters.category });
@@ -562,32 +266,30 @@ export default function MarketPage() {
     );
   }
 
-  /* ──────────────────────── Render ────────────────────────────── */
-
   return (
-    <div className="min-h-screen bg-zinc-50">
-      {/* ── Hero ─────────────────────────────────────────── */}
+    <div className="min-h-screen bg-zinc-50 pb-16 sm:pb-0">
+      {/* Hero */}
       <header className="relative overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-800 to-violet-950">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -left-20 -top-20 h-96 w-96 rounded-full bg-violet-500 blur-3xl" />
           <div className="absolute -bottom-20 right-0 h-80 w-80 rounded-full bg-fuchsia-500 blur-3xl" />
         </div>
-        <div className="relative mx-auto max-w-7xl px-4 py-12 text-center sm:px-6 sm:py-24 lg:px-8">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur">
+        <div className="relative mx-auto max-w-7xl px-4 py-10 text-center sm:px-6 sm:py-20 lg:px-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur">
             <Sparkles className="h-4 w-4 text-violet-400" />
             <span className="text-sm text-zinc-300">
               Маркетплейс для бальных танцев
             </span>
           </div>
-          <h1 className="bg-gradient-to-r from-white via-zinc-200 to-violet-200 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-6xl">
+          <h1 className="bg-gradient-to-r from-white via-zinc-200 to-violet-200 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-5xl">
             ProDance Market
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-base text-zinc-400 sm:mt-4 sm:text-lg">
-            Премиальный маркетплейс для танцоров. Покупайте и продавайте
-            тренировочную и турнирную одежду с умной системой фильтрации.
+          <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400 sm:mt-3 sm:text-base">
+            Покупайте и продавайте тренировочную и турнирную одежду с умной
+            системой фильтрации.
           </p>
 
-          <div className="mx-auto mt-6 max-w-xl sm:mt-8">
+          <div className="mx-auto mt-5 max-w-xl sm:mt-6">
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
               <input
@@ -597,7 +299,7 @@ export default function MarketPage() {
                 onChange={(e) =>
                   setFilters((p) => ({ ...p, search: e.target.value }))
                 }
-                className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-12 pr-4 text-white placeholder-zinc-500 outline-none backdrop-blur transition-colors focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-12 pr-4 text-white placeholder-zinc-500 outline-none backdrop-blur transition-colors focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 sm:py-3.5"
               />
               {filters.search && (
                 <button
@@ -612,12 +314,12 @@ export default function MarketPage() {
         </div>
       </header>
 
-      {/* ── Main content ─────────────────────────────────── */}
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      {/* Main */}
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <div className="lg:flex lg:gap-8">
           {/* Desktop sidebar */}
           <aside className="hidden w-64 shrink-0 lg:block">
-            <div className="sticky top-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="sticky top-20 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
               <div className="mb-5 flex items-center gap-2 text-sm font-semibold text-zinc-800">
                 <SlidersHorizontal className="h-4 w-4" />
                 Фильтры
@@ -627,7 +329,7 @@ export default function MarketPage() {
           </aside>
 
           {/* Mobile filter button */}
-          <div className="mb-4 lg:hidden">
+          <div className="mb-4 flex items-center gap-2 lg:hidden">
             <button
               onClick={() => setMobileFiltersOpen(true)}
               className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
@@ -636,6 +338,13 @@ export default function MarketPage() {
               Фильтры
               <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
             </button>
+            <Link
+              href="/market/create"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700"
+            >
+              <Plus className="h-4 w-4" />
+              Продать
+            </Link>
           </div>
 
           {/* Mobile filter drawer */}
@@ -676,6 +385,13 @@ export default function MarketPage() {
               <p className="text-sm text-zinc-500">
                 {filteredItems.length} {pluralize(filteredItems.length)}
               </p>
+              <Link
+                href="/market/create"
+                className="hidden items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 lg:inline-flex"
+              >
+                <Plus className="h-4 w-4" />
+                Продать
+              </Link>
             </div>
 
             {filteredItems.length === 0 ? (
@@ -695,7 +411,7 @@ export default function MarketPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid gap-4 grid-cols-2 sm:gap-5 lg:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
                 {filteredItems.map((item) => (
                   <ProductCard
                     key={item.id}
@@ -709,7 +425,6 @@ export default function MarketPage() {
         </div>
       </main>
 
-      {/* ── Product detail fullscreen overlay ─────────── */}
       {selectedItem && (
         <ProductDetail item={selectedItem} onBack={handleBack} />
       )}
@@ -757,13 +472,11 @@ function ProductCard({
         <h3 className="mt-0.5 line-clamp-2 text-xs leading-snug text-zinc-600 sm:mt-1 sm:text-sm">
           {item.title}
         </h3>
-
         <div className="mt-2 flex flex-wrap gap-1 sm:mt-3 sm:gap-1.5">
           <Badge>{LABEL[item.program]}</Badge>
           <Badge>{item.size}</Badge>
           {item.federation && <Badge accent>{LABEL[item.federation]}</Badge>}
         </div>
-
         <p className="mt-2 text-[11px] text-zinc-400 sm:mt-3 sm:text-xs">
           {item.seller.city} · {timeAgo(item.posted_at)}
         </p>
@@ -791,7 +504,7 @@ function ProductDetail({
   }, [item.id]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-white overflow-y-auto overscroll-contain">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-white">
       {/* Sticky top bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between bg-white/80 px-3 py-2 backdrop-blur-lg sm:px-6 sm:py-3">
         <button
@@ -799,15 +512,13 @@ function ProductDetail({
           className="flex items-center gap-1 rounded-full p-2 text-zinc-700 transition-colors hover:bg-zinc-100 active:bg-zinc-200"
         >
           <ChevronLeft className="h-5 w-5" />
-          <span className="text-sm font-medium hidden sm:inline">Назад</span>
+          <span className="hidden text-sm font-medium sm:inline">Назад</span>
         </button>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setLiked((p) => !p)}
             className={`rounded-full p-2 transition-colors active:scale-95 ${
-              liked
-                ? "text-rose-500"
-                : "text-zinc-400 hover:bg-zinc-100"
+              liked ? "text-rose-500" : "text-zinc-400 hover:bg-zinc-100"
             }`}
           >
             <Heart
@@ -833,21 +544,17 @@ function ProductDetail({
         />
         {item.images.length > 1 && (
           <>
-            {/* Dots */}
             <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
               {item.images.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrentImage(i)}
                   className={`h-1.5 rounded-full transition-all ${
-                    i === currentImage
-                      ? "w-5 bg-white"
-                      : "w-1.5 bg-white/50"
+                    i === currentImage ? "w-5 bg-white" : "w-1.5 bg-white/50"
                   }`}
                 />
               ))}
             </div>
-            {/* Tap zones for swipe-like behavior */}
             <button
               onClick={() =>
                 setCurrentImage((p) =>
@@ -868,7 +575,6 @@ function ProductDetail({
             />
           </>
         )}
-        {/* Image counter */}
         <span className="absolute right-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white backdrop-blur">
           {currentImage + 1} / {item.images.length}
         </span>
@@ -876,7 +582,6 @@ function ProductDetail({
 
       {/* Content */}
       <div className="mx-auto max-w-2xl px-4 pb-32 sm:px-6">
-        {/* Price & title */}
         <div className="pt-4 sm:pt-6">
           <p className="text-2xl font-bold text-zinc-900 sm:text-3xl">
             {formatPrice(item.price)}
@@ -937,7 +642,6 @@ function ProductDetail({
           </p>
         </div>
 
-        {/* Divider */}
         <hr className="my-5 border-zinc-100 sm:my-6" />
 
         {/* Seller */}
@@ -947,13 +651,19 @@ function ProductDetail({
           </h2>
           <div className="mt-3 flex items-center gap-3">
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-100">
-              <Image
-                src={item.seller.avatar_url}
-                alt={item.seller.name}
-                fill
-                className="object-cover"
-                sizes="48px"
-              />
+              {item.seller.avatar_url ? (
+                <Image
+                  src={item.seller.avatar_url}
+                  alt={item.seller.name}
+                  fill
+                  className="object-cover"
+                  sizes="48px"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-violet-100 text-lg font-bold text-violet-600">
+                  {item.seller.name.charAt(0)}
+                </div>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-zinc-900">
@@ -971,17 +681,11 @@ function ProductDetail({
               <Clock className="h-3.5 w-3.5" />
               <span>На ProDance с {item.seller.registered}</span>
             </div>
-            <span className="text-zinc-200">·</span>
-            <span>
-              {item.seller.listings_count}{" "}
-              {pluralize(item.seller.listings_count, "объявление", "объявления", "объявлений")}
-            </span>
           </div>
         </div>
 
-        {/* Contact options (expanded, not in sticky bar — easier to reach on mobile) */}
+        {/* Contacts */}
         <div className="mt-5 space-y-2.5 sm:mt-6">
-          {/* Phone */}
           {showPhone ? (
             <a
               href={`tel:${item.seller.phone.replace(/[\s()-]/g, "")}`}
@@ -1000,18 +704,18 @@ function ProductDetail({
             </button>
           )}
 
-          {/* Telegram */}
-          <a
-            href={`https://t.me/${item.seller.telegram.replace("@", "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#2AABEE] py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#229ED9] active:bg-[#1a8ac2]"
-          >
-            <Send className="h-4 w-4" />
-            Написать в Telegram
-          </a>
+          {item.seller.telegram && (
+            <a
+              href={`https://t.me/${item.seller.telegram.replace("@", "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#2AABEE] py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#229ED9] active:bg-[#1a8ac2]"
+            >
+              <Send className="h-4 w-4" />
+              Написать в Telegram
+            </a>
+          )}
 
-          {/* Generic message */}
           <button className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-zinc-200 bg-white py-3.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 active:bg-zinc-100">
             <MessageCircle className="h-4 w-4" />
             Написать сообщение
@@ -1019,7 +723,7 @@ function ProductDetail({
         </div>
       </div>
 
-      {/* Sticky bottom CTA for mobile — quick access */}
+      {/* Sticky bottom CTA mobile */}
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-zinc-100 bg-white/90 px-4 py-3 backdrop-blur-lg sm:hidden">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
@@ -1037,7 +741,11 @@ function ProductDetail({
             </a>
           ) : (
             <a
-              href={`https://t.me/${item.seller.telegram.replace("@", "")}`}
+              href={
+                item.seller.telegram
+                  ? `https://t.me/${item.seller.telegram.replace("@", "")}`
+                  : "#"
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 rounded-xl bg-[#2AABEE] px-5 py-3 text-sm font-semibold text-white active:bg-[#1a8ac2]"
@@ -1066,14 +774,8 @@ function SpecCard({
   accent?: boolean;
 }) {
   return (
-    <div
-      className={`rounded-xl p-3 ${
-        accent ? "bg-violet-50" : "bg-zinc-50"
-      }`}
-    >
-      <div
-        className={`mb-1 ${accent ? "text-violet-500" : "text-zinc-400"}`}
-      >
+    <div className={`rounded-xl p-3 ${accent ? "bg-violet-50" : "bg-zinc-50"}`}>
+      <div className={`mb-1 ${accent ? "text-violet-500" : "text-zinc-400"}`}>
         {icon}
       </div>
       <p className="text-[11px] text-zinc-400">{label}</p>
@@ -1108,17 +810,4 @@ function Badge({
       {children}
     </span>
   );
-}
-
-/* ──────────────────────── Pluralize ──────────────────────────── */
-
-function pluralize(n: number, one?: string, few?: string, many?: string): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  const w1 = one ?? "товар";
-  const w2 = few ?? "товара";
-  const w5 = many ?? "товаров";
-  if (mod10 === 1 && mod100 !== 11) return w1;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return w2;
-  return w5;
 }

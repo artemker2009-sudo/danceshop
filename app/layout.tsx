@@ -1,10 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { StoreProvider } from "./lib/store";
+import Header from "./components/Header";
 
 export const metadata: Metadata = {
   title: "ProDance Market — Премиальный маркетплейс для танцоров",
   description:
     "Покупка и продажа тренировочной и турнирной одежды для бальных танцев",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -14,7 +22,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body className="bg-zinc-50 text-zinc-900 antialiased">{children}</body>
+      <body className="bg-zinc-50 text-zinc-900 antialiased">
+        <StoreProvider>
+          <Header />
+          {children}
+        </StoreProvider>
+      </body>
     </html>
   );
 }
