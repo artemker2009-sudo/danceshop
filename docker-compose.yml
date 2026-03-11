@@ -22,7 +22,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://prodance:${POSTGRES_PASSWORD}@postgres:5432/prodance
-      CORS_ORIGINS: '["http://localhost", "http://${SERVER_IP:-localhost}"]'
+      CORS_ORIGINS: '["http://localhost", "http://${SERVER_IP:-localhost}", "https://danceshop.vercel.app"]'
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env.production}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}

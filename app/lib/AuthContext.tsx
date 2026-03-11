@@ -72,14 +72,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (phone: string, password: string) => {
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone_number: phone, password }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone_number: phone, password }),
+      });
+    } catch {
+      throw new Error(
+        "Не удалось подключиться к серверу. Проверьте NEXT_PUBLIC_API_URL и что бэкенд запущен."
+      );
+    }
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
-      throw new Error(payload.detail ?? "Ошибка входа");
+      const detail = Array.isArray(payload.detail) ? payload.detail[0]?.msg : payload.detail;
+      throw new Error(detail ?? "Ошибка входа");
     }
     const data = await res.json();
     const newToken: string = data.access_token;
@@ -90,14 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (data: RegisterData) => {
-    const res = await fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+    } catch {
+      throw new Error(
+        "Не удалось подключиться к серверу. Проверьте NEXT_PUBLIC_API_URL и что бэкенд запущен."
+      );
+    }
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
-      throw new Error(payload.detail ?? "Ошибка регистрации");
+      const detail = Array.isArray(payload.detail) ? payload.detail[0]?.msg : payload.detail;
+      throw new Error(detail ?? "Ошибка регистрации");
     }
     const tokenData = await res.json();
     const newToken: string = tokenData.access_token;
