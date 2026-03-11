@@ -77,6 +77,7 @@ async def upload_file_to_s3(file: UploadFile) -> str:
         async with session.client(
             "s3",
             endpoint_url=settings.s3_endpoint_url,
+            region_name="ru-central1",
             config=_S3_BOTO_CONFIG,
         ) as s3:
             await s3.put_object(
