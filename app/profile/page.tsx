@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,17 +13,30 @@ import {
   Calendar,
   Trash2,
   Package,
-  Settings,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "../lib/AuthContext";
 import { useStore } from "../lib/store";
-import { formatPrice, timeAgo, LABEL, type UserProfile } from "../lib/types";
+import { formatPrice, timeAgo, LABEL, formatMonthYear } from "../lib/types";
 
 export default function ProfilePage() {
-  const { user, login, logout, userItems, deleteItem } = useStore();
+  const router = useRouter();
+  const { user, logout, loading } = useAuth();
+  const { userItems, deleteItem } = useStore();
 
-  if (!user) {
-    return <AuthScreen onLogin={login} />;
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/login");
+    }
+  }, [loading, user, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
+      </div>
+    );
   }
 
   return (
@@ -50,27 +64,31 @@ export default function ProfilePage() {
               <h1 className="truncate text-lg font-bold text-zinc-900 sm:text-xl">
                 {user.name}
               </h1>
-              <div className="mt-0.5 flex items-center gap-1.5 text-sm text-zinc-500">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span>{user.city}</span>
-              </div>
+              {user.city && (
+                <div className="mt-0.5 flex items-center gap-1.5 text-sm text-zinc-500">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span>{user.city}</span>
+                </div>
+              )}
               <div className="mt-0.5 flex items-center gap-1.5 text-sm text-zinc-400">
                 <Calendar className="h-3.5 w-3.5 shrink-0" />
-                <span>На ProDance с {user.registered}</span>
+                <span>На ProDance с {formatMonthYear(user.created_at)}</span>
               </div>
             </div>
           </div>
 
           {/* Contact pills */}
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-600">
               <Phone className="h-3 w-3" />
-              {user.phone}
+              {user.phone_number}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-600">
-              <Send className="h-3 w-3" />
-              {user.telegram}
-            </span>
+            {user.telegram && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-600">
+                <Send className="h-3 w-3" />
+                {user.telegram}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -95,11 +113,10 @@ export default function ProfilePage() {
             }}
             className="flex w-full items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 text-zinc-600 transition-colors hover:bg-zinc-50 active:bg-zinc-100"
           >
-            <Settings className="h-5 w-5 text-zinc-400" />
+            <LogOut className="h-5 w-5 text-zinc-400" />
             <span className="flex-1 text-left text-sm font-medium">
               Выйти из аккаунта
             </span>
-            <LogOut className="h-4 w-4 text-zinc-400" />
           </button>
         </div>
 
@@ -158,7 +175,7 @@ export default function ProfilePage() {
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] text-zinc-400">
-                      {timeAgo(item.posted_at)}
+                      {timeAgo(item.created_at)}
                     </p>
                   </div>
                   <button
@@ -174,117 +191,6 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* ──────────────── Auth / Registration screen ─────────────────── */
-
-function AuthScreen({ onLogin }: { onLogin: (p: UserProfile) => void }) {
-  const [name, setName] = useState("");
-  const [city, setCity] = useState("");
-  const [phone, setPhone] = useState("");
-  const [telegram, setTelegram] = useState("");
-
-  const canSubmit = name.trim() && city.trim() && phone.trim();
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canSubmit) return;
-
-    const month = new Date().toLocaleDateString("ru-RU", {
-      month: "long",
-      year: "numeric",
-    });
-    const capitalized = month.charAt(0).toUpperCase() + month.slice(1);
-
-    onLogin({
-      name: name.trim(),
-      city: city.trim(),
-      phone: phone.trim(),
-      telegram: telegram.trim() || "",
-      avatar_url: "",
-      registered: capitalized,
-    });
-  }
-
-  return (
-    <div className="flex min-h-screen items-start justify-center bg-zinc-50 px-4 pb-20 pt-8 sm:items-center sm:pt-0">
-      <div className="w-full max-w-sm">
-        <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100">
-            <Package className="h-7 w-7 text-violet-600" />
-          </div>
-          <h1 className="text-xl font-bold text-zinc-900">
-            Вход в ProDance Market
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Заполните профиль, чтобы покупать и продавать
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">
-              Ваше имя *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Елена Волкова"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">
-              Город *
-            </label>
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Москва"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">
-              Телефон *
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+7 (999) 123-45-67"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">
-              Telegram (необязательно)
-            </label>
-            <input
-              type="text"
-              value={telegram}
-              onChange={(e) => setTelegram(e.target.value)}
-              placeholder="@username"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="w-full rounded-xl bg-violet-600 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700 disabled:bg-zinc-200 disabled:text-zinc-400"
-          >
-            Войти
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-xs text-zinc-400">
-          Данные сохраняются только в вашем браузере
-        </p>
       </div>
     </div>
   );

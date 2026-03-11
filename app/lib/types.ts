@@ -1,16 +1,18 @@
 export type Category = "competition" | "practice";
 export type Condition = "new" | "used";
-export type Program = "standart" | "latin";
+export type Program = "standard" | "latin";
 export type Gender = "boy" | "girl" | "man" | "woman";
 export type Federation = "FTSARR" | "RTS" | "WDSF" | "any";
+export type Status = "active" | "sold" | "hidden";
 
 export interface Seller {
+  id: string;
   name: string;
-  city: string;
+  city: string | null;
   phone: string;
-  telegram: string;
-  avatar_url: string;
-  registered: string;
+  telegram: string | null;
+  avatar_url: string | null;
+  created_at: string;
   listings_count: number;
 }
 
@@ -25,12 +27,21 @@ export interface MarketItem {
   program: Program;
   gender: Gender;
   size: string;
-  height: string;
+  height: string | null;
   federation: Federation | null;
-  description: string;
-  posted_at: string;
+  status: Status;
+  description: string | null;
+  video_url: string | null;
   views: number;
+  created_at: string;
   seller: Seller;
+}
+
+export interface ProductListResponse {
+  items: MarketItem[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface UserProfile {
@@ -47,7 +58,7 @@ export const LABEL: Record<string, string> = {
   practice: "Тренировочная",
   new: "Новое",
   used: "Б/У",
-  standart: "Стандарт",
+  standard: "Стандарт",
   latin: "Латина",
   FTSARR: "ФТСАРР",
   RTS: "РТС",
@@ -98,4 +109,14 @@ export function pluralize(
   if (mod10 === 1 && mod100 !== 11) return w1;
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return w2;
   return w5;
+}
+
+const MONTHS_RU = [
+  "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+  "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+];
+
+export function formatMonthYear(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${MONTHS_RU[d.getMonth()]} ${d.getFullYear()}`;
 }

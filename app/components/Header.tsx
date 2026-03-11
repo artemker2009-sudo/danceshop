@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Store, Plus, UserCircle, Search } from "lucide-react";
-import { useStore } from "../lib/store";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Header() {
   const pathname = usePathname();
-  const { user } = useStore();
+  const { user } = useAuth();
 
   const tabs = [
     { href: "/market", label: "Каталог", icon: Search },

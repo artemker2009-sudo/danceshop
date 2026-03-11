@@ -4,4 +4,13 @@ out/
 .vercel/
 *.tsbuildinfo
 next-env.d.ts
-.vercel
+
+# Environment files with secrets — never commit these
+.env
+.env.local
+.env*.local
+backend/.env
+backend/.venv/
+__pycache__/
+*.pyc
+.env.production

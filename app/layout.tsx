@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AuthProvider } from "./lib/AuthContext";
 import { StoreProvider } from "./lib/store";
 import Header from "./components/Header";
 
@@ -23,10 +24,12 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="bg-zinc-50 text-zinc-900 antialiased">
-        <StoreProvider>
-          <Header />
-          {children}
-        </StoreProvider>
+        <AuthProvider>
+          <StoreProvider>
+            <Header />
+            {children}
+          </StoreProvider>
+        </AuthProvider>
       </body>
     </html>
   );

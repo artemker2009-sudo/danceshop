@@ -1,38 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ChevronLeft,
-  ImagePlus,
+  Upload,
+  X,
   Check,
   AlertCircle,
+  Loader2,
+  ImagePlus,
+  Video,
 } from "lucide-react";
-import { useStore } from "../../lib/store";
-import type {
-  Category,
-  Condition,
-  Program,
-  Gender,
-  Federation,
-  MarketItem,
-} from "../../lib/types";
+import type { Category, Condition, Program, Gender, Federation } from "../../lib/types";
 import { LABEL } from "../../lib/types";
+import { useAuth } from "../../lib/AuthContext";
 
-const PLACEHOLDER_IMAGES = [
-  "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1547153760-18fc86324498?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=800&fit=crop",
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+
+/* ─── Photo picker state ─── */
+interface PhotoFile {
+  file: File;
+  preview: string;
+}
+
+/* ─── Page ─── */
 
 export default function CreateListingPage() {
   const router = useRouter();
-  const { user, addItem } = useStore();
+  const { token, loading: authLoading } = useAuth();
 
+  useEffect(() => {
+    if (!authLoading && !token) {
+      router.replace("/login");
+    }
+  }, [authLoading, token, router]);
+
+  // Form fields
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
@@ -42,38 +48,143 @@ export default function CreateListingPage() {
   const [gender, setGender] = useState<Gender>("woman");
   const [size, setSize] = useState("");
   const [height, setHeight] = useState("");
-  const [federation, setFederation] = useState<Federation | "">("FTSARR");
-  const [submitted, setSubmitted] = useState(false);
+  const [federation, setFederation] = useState<Federation | "">("");
 
-  if (!user) {
+  // Photo state
+  const [photos, setPhotos] = useState<PhotoFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Video state (max 1)
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // Submission state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  /* ─── Photo handlers ─── */
+
+  const isImageFile = useCallback((file: File) => {
+    if (file.type.startsWith("image/")) return true;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    return ext === "heic" || ext === "heif";
+  }, []);
+
+  const addPhotos = useCallback((files: FileList | null) => {
+    if (!files) return;
+    const next: PhotoFile[] = [];
+    for (const file of Array.from(files)) {
+      if (!isImageFile(file)) continue;
+      if (photos.length + next.length >= 10) break;
+      next.push({ file, preview: URL.createObjectURL(file) });
+    }
+    setPhotos((p) => [...p, ...next]);
+  }, [photos, isImageFile]);
+
+  function removePhoto(index: number) {
+    setPhotos((p) => {
+      URL.revokeObjectURL(p[index].preview);
+      return p.filter((_, i) => i !== index);
+    });
+  }
+
+  /* ─── Drag & drop ─── */
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    addPhotos(e.dataTransfer.files);
+  }
+
+  /* ─── Video handlers ─── */
+
+  function addVideo(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (!file.type.startsWith("video/")) return;
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+  }
+
+  function removeVideo() {
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setVideoFile(null);
+    setVideoPreview(null);
+  }
+
+  /* ─── Submit ─── */
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit || loading) return;
+
+    setLoading(true);
+    setError(null);
+
+    const fd = new FormData();
+    fd.append("title", title.trim());
+    fd.append("price", price);
+    fd.append("category", category);
+    fd.append("condition", condition);
+    fd.append("program", program);
+    fd.append("gender", gender);
+    fd.append("size", size.trim());
+    if (height.trim()) fd.append("height", height.trim());
+    if (category === "competition" && federation) fd.append("federation", federation);
+    if (description.trim()) fd.append("description", description.trim());
+    photos.forEach((p) => fd.append("images", p.file));
+    if (videoFile) fd.append("video", videoFile);
+
+    try {
+      const res = await fetch(`${API_URL}/products`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.detail ?? `Ошибка сервера: ${res.status}`);
+      }
+
+      const product = await res.json();
+      setDone(true);
+      router.push(`/market?highlight=${product.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Неизвестная ошибка");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const canSubmit =
+    title.trim() &&
+    price &&
+    size.trim() &&
+    photos.length > 0 &&
+    !loading;
+
+  /* ─── Loading / not authenticated ─── */
+
+  if (authLoading || !token) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 pb-20 text-center">
-        <AlertCircle className="mb-3 h-12 w-12 text-zinc-300" />
-        <h1 className="text-lg font-bold text-zinc-800">
-          Необходимо войти
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Чтобы создать объявление, заполните профиль
-        </p>
-        <Link
-          href="/profile"
-          className="mt-4 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-violet-700"
-        >
-          Перейти в профиль
-        </Link>
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
       </div>
     );
   }
 
-  if (submitted) {
+  /* ─── Success ─── */
+
+  if (done) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 pb-20 text-center">
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
           <Check className="h-8 w-8 text-emerald-600" />
         </div>
-        <h1 className="text-xl font-bold text-zinc-900">
-          Объявление опубликовано!
-        </h1>
+        <h1 className="text-xl font-bold text-zinc-900">Объявление опубликовано!</h1>
         <p className="mt-1 text-sm text-zinc-500">
           Теперь его видят все пользователи ProDance Market
         </p>
@@ -95,52 +206,11 @@ export default function CreateListingPage() {
     );
   }
 
-  const canSubmit =
-    title.trim() && price && description.trim() && size.trim() && height.trim();
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canSubmit || !user) return;
-
-    const img =
-      PLACEHOLDER_IMAGES[
-        Math.floor(Math.random() * PLACEHOLDER_IMAGES.length)
-      ];
-
-    const item: MarketItem = {
-      id: `user_${Date.now()}`,
-      title: title.trim(),
-      price: Number(price),
-      image_url: img,
-      images: [img.replace("w=600&h=800", "w=800&h=1000")],
-      category,
-      condition,
-      program,
-      gender,
-      size: size.trim(),
-      height: height.trim(),
-      federation: category === "competition" && federation ? federation : null,
-      description: description.trim(),
-      posted_at: new Date().toISOString(),
-      views: 0,
-      seller: {
-        name: user.name,
-        city: user.city,
-        phone: user.phone,
-        telegram: user.telegram,
-        avatar_url: user.avatar_url,
-        registered: user.registered,
-        listings_count: 0,
-      },
-    };
-
-    addItem(item);
-    setSubmitted(true);
-  }
+  /* ─── Form ─── */
 
   return (
     <div className="min-h-screen bg-zinc-50 pb-24 sm:pb-8">
-      {/* Top bar */}
+      {/* Mobile top bar */}
       <div className="sticky top-0 z-10 border-b border-zinc-100 bg-white/80 px-4 py-3 backdrop-blur-lg sm:hidden">
         <div className="flex items-center gap-2">
           <button
@@ -149,9 +219,7 @@ export default function CreateListingPage() {
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-semibold text-zinc-900">
-            Новое объявление
-          </h1>
+          <h1 className="text-base font-semibold text-zinc-900">Новое объявление</h1>
         </div>
       </div>
 
@@ -163,14 +231,129 @@ export default function CreateListingPage() {
           Новое объявление
         </h1>
 
-        {/* Photo placeholder */}
-        <div className="mb-5 flex h-32 items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-white transition-colors">
-          <div className="text-center">
-            <ImagePlus className="mx-auto mb-1 h-8 w-8 text-zinc-300" />
-            <p className="text-xs text-zinc-400">
-              Фото (скоро)
-            </p>
-          </div>
+        {/* ── Photo picker ── */}
+        <div className="mb-6">
+          <label className="mb-2 block text-xs font-medium text-zinc-500">
+            Фотографии * (до 10 штук)
+          </label>
+
+          {/* Drop zone — shown only when fewer than 10 photos */}
+          {photos.length < 10 && (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+              className="mb-3 flex h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-200 bg-white transition-colors hover:border-violet-400 hover:bg-violet-50/30 active:bg-violet-50"
+            >
+              <Upload className="h-6 w-6 text-zinc-300" />
+              <p className="text-xs text-zinc-400">
+                Нажмите или перетащите фото
+              </p>
+              <p className="text-[11px] text-zinc-300">
+                JPEG, PNG, WEBP, HEIC до 10 МБ
+              </p>
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
+            multiple
+            className="hidden"
+            onChange={(e) => addPhotos(e.target.files)}
+          />
+
+          {/* Thumbnails */}
+          {photos.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {photos.map((p, i) => (
+                <div
+                  key={p.preview}
+                  className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 shadow-sm"
+                >
+                  <Image
+                    src={p.preview}
+                    alt={`Фото ${i + 1}`}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                  {/* Main photo badge */}
+                  {i === 0 && (
+                    <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 py-px text-[9px] font-semibold text-white">
+                      Главное
+                    </span>
+                  )}
+                  {/* Remove button */}
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add more — compact */}
+              {photos.length < 10 && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-zinc-200 text-zinc-300 transition-colors hover:border-violet-400 hover:text-violet-400"
+                >
+                  <ImagePlus className="h-5 w-5" />
+                  <span className="text-[10px]">Добавить</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Video picker ── */}
+        <div className="mb-6">
+          <label className="mb-2 block text-xs font-medium text-zinc-500">
+            Видео (необязательно, макс. 1)
+          </label>
+
+          {!videoFile ? (
+            <div
+              onClick={() => videoInputRef.current?.click()}
+              className="flex h-20 cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-200 bg-white transition-colors hover:border-violet-400 hover:bg-violet-50/30 active:bg-violet-50"
+            >
+              <Video className="h-5 w-5 text-zinc-300" />
+              <span className="text-xs text-zinc-400">Добавить видео</span>
+              <span className="text-[11px] text-zinc-300">MP4, MOV, WEBM до 100 МБ</span>
+            </div>
+          ) : (
+            <div className="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-900">
+              <video
+                src={videoPreview!}
+                className="h-40 w-full object-contain"
+                controls
+                muted
+              />
+              <button
+                type="button"
+                onClick={removeVideo}
+                className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white transition-opacity hover:bg-black/80"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <div className="px-3 py-1.5 text-xs text-zinc-400 truncate">
+                {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)} МБ)
+              </div>
+            </div>
+          )}
+
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+            className="hidden"
+            onChange={(e) => addVideo(e.target.files)}
+          />
         </div>
 
         {/* Title */}
@@ -192,11 +375,12 @@ export default function CreateListingPage() {
             onChange={(e) => setPrice(e.target.value)}
             placeholder="45000"
             inputMode="numeric"
+            min={1}
             className="input-field"
           />
         </Field>
 
-        {/* Category toggle */}
+        {/* Category */}
         <Field label="Категория">
           <ToggleGroup
             options={[
@@ -204,11 +388,14 @@ export default function CreateListingPage() {
               { value: "practice", label: "Тренировочная" },
             ]}
             value={category}
-            onChange={(v) => setCategory(v as Category)}
+            onChange={(v) => {
+              setCategory(v as Category);
+              setFederation("");
+            }}
           />
         </Field>
 
-        {/* Condition toggle */}
+        {/* Condition */}
         <Field label="Состояние">
           <ToggleGroup
             options={[
@@ -225,7 +412,7 @@ export default function CreateListingPage() {
           <ToggleGroup
             options={[
               { value: "latin", label: "Латина" },
-              { value: "standart", label: "Стандарт" },
+              { value: "standard", label: "Стандарт" },
             ]}
             value={program}
             onChange={(v) => setProgram(v as Program)}
@@ -263,7 +450,7 @@ export default function CreateListingPage() {
               className="input-field"
             />
           </Field>
-          <Field label="Рост *">
+          <Field label="Рост">
             <input
               type="text"
               value={height}
@@ -274,7 +461,7 @@ export default function CreateListingPage() {
           </Field>
         </div>
 
-        {/* Federation (only competition) */}
+        {/* Federation */}
         {category === "competition" && (
           <Field label="Правила федерации">
             <div className="grid grid-cols-3 gap-2">
@@ -297,37 +484,38 @@ export default function CreateListingPage() {
         )}
 
         {/* Description */}
-        <Field label="Описание *">
+        <Field label="Описание">
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            placeholder="Расскажите о состоянии, истории, особенностях вещи. Укажите, готовы ли отправить или только самовывоз."
+            placeholder="Расскажите о состоянии, истории, особенностях. Укажите, готовы ли отправить или только самовывоз."
             className="input-field resize-none"
           />
         </Field>
 
-        {/* Seller info preview */}
-        <div className="mb-5 rounded-2xl bg-violet-50 p-4">
-          <p className="text-xs font-medium text-violet-600">
-            Контакты из вашего профиля
-          </p>
-          <p className="mt-1 text-sm text-violet-900">
-            {user.name} · {user.city}
-          </p>
-          <p className="text-sm text-violet-700">{user.phone}</p>
-          {user.telegram && (
-            <p className="text-sm text-violet-700">{user.telegram}</p>
-          )}
-        </div>
+        {/* Error */}
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Submit */}
         <button
           type="submit"
           disabled={!canSubmit}
-          className="w-full rounded-2xl bg-zinc-900 py-4 text-sm font-semibold text-white transition-colors hover:bg-violet-600 disabled:bg-zinc-200 disabled:text-zinc-400"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-900 py-4 text-sm font-semibold text-white transition-colors hover:bg-violet-600 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
         >
-          Опубликовать объявление
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Публикуем…
+            </>
+          ) : (
+            "Опубликовать объявление"
+          )}
         </button>
 
         <style jsx>{`
@@ -354,7 +542,7 @@ export default function CreateListingPage() {
   );
 }
 
-/* ───────────────────── Helpers ────────────────────────────────── */
+/* ─── Helpers ─── */
 
 function Field({
   label,
