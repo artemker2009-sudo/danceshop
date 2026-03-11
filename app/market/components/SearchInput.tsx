@@ -12,7 +12,7 @@ export function SearchInput() {
   const searchParams = useSearchParams();
 
   const [value, setValue] = useState(searchParams.get("search") ?? "");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     setValue(searchParams.get("search") ?? "");
